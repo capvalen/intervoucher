@@ -6,6 +6,7 @@ $json = file_get_contents('https://intervouchers.com/ticket/precios.json');
 $obj = json_decode($json,true);
 
 $tBase= $obj[$_GET['card']];
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -144,7 +145,6 @@ $tBase= $obj[$_GET['card']];
 				<img id="qrImg" src="" alt="">
 				<p>Pay <strong id="spanPrecFinal"></strong> to this direction:</p>
 				<p class="mb-0" id="direccionAumb"></p>
-				<p class="lead">Before to pay contact via WhatsApp: <strong><?= "+51".$obj['CELULAR']['1']; ?></strong></p>
 				<div class="bg-dark">
 					<img class="w-75 py-3" src="https://intervouchers.com/wp-content/uploads/2016/05/logo_intervouchers_2.png" alt="">
 				</div>
@@ -154,11 +154,59 @@ $tBase= $obj[$_GET['card']];
   </div>
 </div>
 
+<!-- Modal -->
+<div class="modal fade" id="modalPagoComplete" tabindex="-1" role="dialog" aria-labelledby="exampleModalCenterTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="exampleModalCenterTitle">Modal title</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+			<img src="check.svg" alt="">
+        Now. Please contact via WhatsApp: <strong><?= "+51".$obj['CELULAR']['1']; ?></strong>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 
 <script>
+
+
+var btc= new WebSocket ("wss://ws.blockchain.info/inv");
+   btc.onopen = function () {
+      btc.send(JSON.stringify({"op":"addr_sub", "addr":"1PauQUU89jyihneBttsWc8RocfZEyzroeT"}
+   ));
+   btc.onmessage = function (mensaje) {
+      var respuesta = JSON.parse(mensaje.data)
+      //console.log( respuesta);
+		var getOuts = respuesta.x.out;
+		var count = getOuts.length;
+		for(i=0; i< count; i++){
+			var outAdd = respuesta.x.out[i].addr;
+			var address = "1PauQUU89jyihneBttsWc8RocfZEyzroeT";
+			if( outAdd == address ){
+				var monto = respuesta.x.out[i].value;
+				var calcMonto = monto / 100000000;
+				console.log('pagado '+ calcMonto);
+				pagoCompleto()
+				//$('#spanPrecFinal').text()
+			}else{
+				//console.log('falta');
+			}
+		}
+   }
+}
+
 var precio =parseFloat($('#spanSubPrice').text()).toFixed(2);
 $('#spanSubPrice').text( precio );
 $('#btnBotones .btnPagos').eq(0).addClass('active');
@@ -195,7 +243,7 @@ $('#btnSolicitarProceso').click(function() {
 		$.ajax({url: 'prepararQRProceso.php', type: 'POST', data: { card: '<?= $tBase['nombre']; ?>', subid:$('#btnSolicitarProceso').attr('data-pre'), nombre: $('#txtNombreComprador').val(), correo: $('#txtCorreoComprador').val() }}).done(function(resp) {
 			//console.log(resp)
 			$('#divLoading').addClass('d-none');
-			var jTicket = JSON.parse(resp); console.log(jTicket.length)
+			var jTicket = JSON.parse(resp); //console.log(jTicket.length)
 			$('#spanPrecFinal').text( jTicket.enBtc);
 			$('#direccionAumb').text( jTicket.aumbbel);
 			$('#qrImg').attr('src', jTicket.img);
@@ -203,6 +251,11 @@ $('#btnSolicitarProceso').click(function() {
 		});
 	}
 });
+function pagoCompleto() {
+//	Pago completo
+$('#modalCorreo').modal('hide');
+$('#modalPagoComplete').modal('show');
+}
 </script>
 </body>
 </html>
